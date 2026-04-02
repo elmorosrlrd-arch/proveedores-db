@@ -416,16 +416,37 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 16px 20px;
+    padding: 14px 16px;
     border-bottom: 1px solid var(--border);
     position: sticky;
     top: 0;
     background: var(--bg2);
     z-index: 1;
+    gap: 10px;
+    overflow: hidden;
   }
 
-  .modal-title { font-size: 15px; font-weight: 600; }
-  .modal-subtitle { font-size: 12px; color: var(--text3); margin-top: 2px; }
+  .modal-header-text {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .modal-title {
+    font-size: 15px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .modal-subtitle {
+    font-size: 12px;
+    color: var(--text3);
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
 
   .close-btn {
     background: var(--bg3);
@@ -433,7 +454,8 @@
     border-radius: 50%;
     color: var(--text2);
     cursor: pointer;
-    width: 28px; height: 28px;
+    width: 34px; height: 34px;
+    min-width: 34px;
     display: flex; align-items: center; justify-content: center;
     font-size: 18px;
     line-height: 1;
@@ -443,7 +465,31 @@
 
   .close-btn:hover { color: var(--text); background: var(--border); }
 
-  .modal-body { padding: 20px; }
+  .modal-body { padding: 16px; overflow-x: hidden; }
+
+  .ver-mas-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    margin-top: 20px;
+    padding: 12px;
+    background: var(--bg3);
+    border: 1px solid var(--border2);
+    border-radius: var(--radius);
+    color: var(--accent);
+    font-family: var(--font);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .ver-mas-btn:hover { background: var(--border); }
+
+  .extra-fields { display: none; }
+  .extra-fields.visible { display: block; }
 
   .section-title {
     font-size: 11px;
@@ -741,7 +787,7 @@
 <div class="overlay" id="detailOverlay">
   <div class="modal" id="detailModal">
     <div class="modal-header">
-      <div>
+      <div class="modal-header-text">
         <div class="modal-title" id="modalTitle">—</div>
         <div class="modal-subtitle" id="modalSubtitle">—</div>
       </div>
@@ -1059,6 +1105,31 @@ function sortBy(col) {
 }
 
 // ── DETALLE ───────────────────────────────────────────────────────
+
+// Campos que se muestran siempre (principales)
+const PRIMARY_FIELDS = ["Proveedor","ESTADO","TITULAR","CUIT","CUENTA N°","CBU/CVU","ALIAS"];
+
+// Campos extra agrupados (se muestran al tocar "Ver más")
+const EXTRA_SECTIONS = {
+  "Datos bancarios": ["TIPO DE CUENTA","BANCO","PAGAR DESDE"],
+  "Operación": ["CTA. INTEGRADA/RECAUDADORA","CARGADO EN GESCOM","Tarjeta","E-CHEQ","BCO. E-CHEQ","MERC. PAGO"],
+  "Fechas y notas": ["Fecha de Actualización","Observaciones"],
+  "Contacto": ["E-MAIL AVISO DE PAGO 1","E-MAIL AVISO DE PAGO 2"],
+};
+
+const MONO_FIELDS = ["CUIT","CBU/CVU","CUENTA N°","ALIAS"];
+const FULL_FIELDS = ["CBU/CVU","Observaciones","E-MAIL AVISO DE PAGO 1","E-MAIL AVISO DE PAGO 2"];
+
+function renderField(f, row) {
+  const val = row[f] || "";
+  const isMono = MONO_FIELDS.includes(f);
+  const isFull = FULL_FIELDS.includes(f);
+  return `<div class="detail-item${isFull?' full':''}">
+    <div class="detail-key">${f}</div>
+    <div class="detail-val${isMono?' mono':''}">${val}</div>
+  </div>`;
+}
+
 function openDetail(idx) {
   const row = filtered[idx];
   if (!row) return;
@@ -1066,31 +1137,29 @@ function openDetail(idx) {
   document.getElementById("modalTitle").textContent = row["Proveedor"] || "—";
   document.getElementById("modalSubtitle").textContent = row["TITULAR"] || "";
 
-  // Agrupar campos
-  const sections = {
-    "Identificación": ["Proveedor","ESTADO","TITULAR","CUIT","Fecha de Actualización","Observaciones"],
-    "Datos bancarios": ["TIPO DE CUENTA","CBU/CVU","ALIAS","CUENTA N°","BANCO"],
-    "Pagos y operación": ["PAGAR DESDE","CTA. INTEGRADA/RECAUDADORA","CARGADO EN GESCOM","Tarjeta","E-CHEQ","BCO. E-CHEQ","MERC. PAGO"],
-    "Contacto": ["E-MAIL AVISO DE PAGO 1","E-MAIL AVISO DE PAGO 2"],
-  };
+  // — CAMPOS PRINCIPALES —
+  const primaryVisible = PRIMARY_FIELDS.filter(f => headers.includes(f) && (row[f]||"").trim());
+  let html = `<div class="detail-grid">`;
+  primaryVisible.forEach(f => { html += renderField(f, row); });
+  html += `</div>`;
 
-  const monoFields = ["CUIT","CBU/CVU","CUENTA N°","ALIAS"];
+  // — CAMPOS EXTRA (ocultos hasta "Ver más") —
+  let extraHtml = "";
+  for (const [sec, fields] of Object.entries(EXTRA_SECTIONS)) {
+    const visible = fields.filter(f => headers.includes(f) && (row[f]||"").trim());
+    if (!visible.length) continue;
+    extraHtml += `<div class="section-title">${sec}</div><div class="detail-grid">`;
+    visible.forEach(f => { extraHtml += renderField(f, row); });
+    extraHtml += `</div>`;
+  }
 
-  let html = "";
-  for (const [sec, fields] of Object.entries(sections)) {
-    const relevant = fields.filter(f => headers.includes(f) && (row[f] || "").trim() !== "");
-    if (!relevant.length) continue;
-    html += `<div class="section-title">${sec}</div><div class="detail-grid">`;
-    relevant.forEach(f => {
-      const val = row[f] || "";
-      const isMono = monoFields.includes(f);
-      const isFull = ["CBU/CVU","Observaciones","E-MAIL AVISO DE PAGO 1","E-MAIL AVISO DE PAGO 2"].includes(f);
-      html += `<div class="detail-item${isFull?' full':''}">
-        <div class="detail-key">${f}</div>
-        <div class="detail-val${isMono?' mono':''}">${val}</div>
-      </div>`;
-    });
-    html += `</div>`;
+  if (extraHtml) {
+    html += `
+      <div class="extra-fields" id="extraFields">${extraHtml}</div>
+      <button class="ver-mas-btn" id="verMasBtn" onclick="toggleExtra()">
+        <span id="verMasIcon">▼</span>
+        <span id="verMasLabel">Ver más información</span>
+      </button>`;
   }
 
   const modalEl = document.getElementById("detailModal");
@@ -1098,6 +1167,15 @@ function openDetail(idx) {
   document.getElementById("detailOverlay").classList.add("open");
   modalEl.scrollTop = 0;
   document.body.style.overflow = "hidden";
+}
+
+function toggleExtra() {
+  const extra = document.getElementById("extraFields");
+  const icon  = document.getElementById("verMasIcon");
+  const label = document.getElementById("verMasLabel");
+  const open  = extra.classList.toggle("visible");
+  icon.textContent  = open ? "▲" : "▼";
+  label.textContent = open ? "Ver menos" : "Ver más información";
 }
 
 function closeDetail() {
