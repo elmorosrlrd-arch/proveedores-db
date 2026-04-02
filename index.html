@@ -426,12 +426,14 @@
     background: var(--bg2);
     z-index: 1;
     gap: 10px;
-    overflow: hidden;
+    width: 100%;
+    box-sizing: border-box;
   }
 
   .modal-header-text {
     flex: 1;
     min-width: 0;
+    overflow: hidden;
   }
 
   .modal-title {
@@ -468,7 +470,43 @@
 
   .close-btn:hover { color: var(--text); background: var(--border); }
 
-  .modal-body { padding: 16px; overflow-x: hidden; }
+  .modal-body {
+    padding: 16px;
+    padding-bottom: 90px;
+    overflow-x: hidden;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  /* Botón cerrar fijo abajo al centro — solo en móvil */
+  .close-bottom-btn {
+    display: none;
+  }
+
+  @media (max-width: 639px) {
+    .close-bottom-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      position: fixed;
+      bottom: calc(16px + env(safe-area-inset-bottom));
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 300;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 30px;
+      font-family: var(--font);
+      font-size: 15px;
+      font-weight: 600;
+      padding: 13px 36px;
+      cursor: pointer;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+      white-space: nowrap;
+    }
+  }
 
   .ver-mas-btn {
     display: flex;
@@ -799,6 +837,7 @@
       <button class="close-btn" id="closeModal">✕</button>
     </div>
     <div class="modal-body" id="modalBody"></div>
+    <button class="close-bottom-btn" id="closeModalBottom">✕ Cerrar</button>
   </div>
 </div>
 
@@ -898,6 +937,7 @@ function setupEventListeners() {
   });
 
   document.getElementById("closeModal").addEventListener("click", closeDetail);
+  document.getElementById("closeModalBottom").addEventListener("click", closeDetail);
   document.getElementById("detailOverlay").addEventListener("click", e => {
     if (e.target === e.currentTarget) closeDetail();
   });
@@ -1112,11 +1152,11 @@ function sortBy(col) {
 // ── DETALLE ───────────────────────────────────────────────────────
 
 // Campos que se muestran siempre (principales)
-const PRIMARY_FIELDS = ["Proveedor","ESTADO","TITULAR","CUIT","CUENTA N°","CBU/CVU","ALIAS"];
+const PRIMARY_FIELDS = ["Proveedor","ESTADO","TITULAR","CUIT","CUENTA N°","CBU/CVU","ALIAS","BANCO"];
 
 // Campos extra agrupados (se muestran al tocar "Ver más")
 const EXTRA_SECTIONS = {
-  "Datos bancarios": ["TIPO DE CUENTA","BANCO","PAGAR DESDE"],
+  "Datos bancarios": ["TIPO DE CUENTA","PAGAR DESDE"],
   "Operación": ["CTA. INTEGRADA/RECAUDADORA","CARGADO EN GESCOM","Tarjeta","E-CHEQ","BCO. E-CHEQ","MERC. PAGO"],
   "Fechas y notas": ["Fecha de Actualización","Observaciones"],
   "Contacto": ["E-MAIL AVISO DE PAGO 1","E-MAIL AVISO DE PAGO 2"],
